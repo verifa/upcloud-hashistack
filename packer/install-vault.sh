@@ -73,9 +73,11 @@ function configure_systemd {
 }
 
 function configure_vault_config {
-    log_info "Create configuration directory /etc/vault.d"
+    log_info "Create configuration directory /etc/vault.d and data dir /opt/vault/data"
     mkdir --parents /etc/vault.d
     chown --recursive vault:vault /etc/vault.d
+    mkdir --parents /opt/vault/data
+    chown --recursive vault:vault /opt/vault/data
 }
 
 function install {
