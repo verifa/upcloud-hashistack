@@ -1,4 +1,4 @@
 
 output "all" {
-  value = upcloud_server.example
+  value = upcloud_server.vault
 }

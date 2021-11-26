@@ -23,7 +23,17 @@ variable "network_gw" {
   default = ""
 }
 
-variable "hostname" {
+variable "hostname_prefix" {
   type = string
   default = ""
+}
+
+variable "vault_vm_count" {
+  type = number
+  default = 3
+}
+
+variable "environment" {
+  type = string
+  default = "prod"
 }
