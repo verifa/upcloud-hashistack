@@ -7,6 +7,28 @@ provider "upcloud" {
 locals {
   # include '\\.' in the regex
   discovery_regex = var.hostname_prefix != "" ? "^${var.hostname_prefix}[0-9]+\\\\.vault" : "^terraform[0-9]+\\\\.vault"
+
+  # for_each variable to allow rolling ugprades by swapping image parameter value
+  vault_servers = {
+    0 = {
+      "image" : var.custom_image
+      "unseal_keys": var.unseal_keys
+# When upgrading change image one-by-one (standbys)
+#      "image" : var.custom_image
+# Unseal just this one:
+#      "unseal_keys": var.unseal_keys
+# Skip unsealing (perhaps starting from scratch):
+#      "unseal_keys": []
+    },
+    1 = {
+      "image" : var.custom_image
+      "unseal_keys": []
+    },
+    2 = {
+      "image" : var.custom_image
+      "unseal_keys": []
+    },
+  }
 }
 
 # resource "upcloud_floating_ip_address" "my_floating_address" {
@@ -38,8 +60,8 @@ resource "upcloud_storage" "vault_storage" {
 }
 
 resource "upcloud_server" "vault" {
-  count    = var.vault_vm_count
-  hostname = var.hostname_prefix != "" ? "${var.hostname_prefix}${count.index}.vault.example.tld" : "terraform${count.index}.vault.example.tld"
+  for_each = local.vault_servers
+  hostname = var.hostname_prefix != "" ? "${var.hostname_prefix}${each.key}.vault.example.tld" : "terraform${each.key}.vault.example.tld"
   zone     = "fi-hel1"
   plan     = "1xCPU-1GB"
   metadata = true # false by default, must be enabled to enable ssh keys to be injected and cloud-init to run
@@ -75,12 +97,14 @@ resource "upcloud_server" "vault" {
   }
 
   storage_devices {
-    storage = upcloud_storage.vault_storage[count.index].id
+    # mounts are dependent on the key of the vault_server!
+    storage = upcloud_storage.vault_storage[each.key].id
   }
 
-  user_data = templatefile("user_data.tftpl", { count = count.index,
-                                                regex = local.discovery_regex,
-                                                username = var.username,
-                                                password = var.password })
+  user_data = templatefile("user_data.tftpl", { index = each.key,
+    regex    = local.discovery_regex,
+    username = var.username,
+    password = var.password,
+  unseal_keys = local.vault_servers[each.key].unseal_keys })
 
 }

@@ -1,4 +1,3 @@
-
 variable "username" {
   type = string
 }
@@ -14,26 +13,35 @@ variable "custom_image" {
 }
 
 variable "network_cidr" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "network_gw" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "hostname_prefix" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "vault_vm_count" {
-  type = number
+  type    = number
   default = 3
 }
 
 variable "environment" {
-  type = string
+  type    = string
   default = "prod"
+}
+
+variable "unseal_keys" {
+  type        = list(string)
+  description = <<EOT
+  If initializing a cluster can be left empty, otherwise provide enough keys to unseal (depending on the threshold for shamir shards).
+  Example: unseal_keys = ["foo","bar","baz"]
+EOT
+  default     = []
 }

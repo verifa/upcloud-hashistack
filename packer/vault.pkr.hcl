@@ -53,9 +53,11 @@ build {
   # the image is missing cloud-init, and we must get the latest version from bookworm repos
   provisioner "shell" {
     inline = [
+      "cp /etc/apt/sources.list /etc/apt/sources.list.bak",
       "echo \"deb http://deb.debian.org/debian/ bookworm main\" >> /etc/apt/sources.list",
       "echo \"deb-src http://deb.debian.org/debian/ bookworm main\" >> /etc/apt/sources.list",
       "apt update -qq && apt install -y -qq cloud-init=21.4-1",
+      "mv /etc/apt/sources.list.bak /etc/apt/sources.list",
     ]
   }
 }
