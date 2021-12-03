@@ -22,6 +22,7 @@ write_files:
     "cluster_addr": "https://INSTANCE_IP:8201",
     "disable_mlock": true,
     "ui": true,
+    "log_level": "trace",
     "listener": {
         "tcp": {
             "tls_disable": 1,
@@ -31,7 +32,11 @@ write_files:
     "storage": {
         "raft": {
             "node_id": "node${count}",
-            "path": "/opt/vault/data"
+            "path": "/opt/vault/data",
+            "retry_join": {
+                "auto_join": "provider=upcloud title_match=${regex} username=${username} password=${password}",
+                "auto_join_scheme": "http"
+            }
         }
     },
     "telemetry": {

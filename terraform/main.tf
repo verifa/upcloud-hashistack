@@ -4,6 +4,11 @@ provider "upcloud" {
   password = var.password
 }
 
+locals {
+  # include '\\.' in the regex
+  discovery_regex = var.hostname_prefix != "" ? "^${var.hostname_prefix}[0-9]+\\\\.vault" : "^terraform[0-9]+\\\\.vault"
+}
+
 # resource "upcloud_floating_ip_address" "my_floating_address" {
 #   zone = "fi-hel1"
 # }
@@ -34,10 +39,10 @@ resource "upcloud_storage" "vault_storage" {
 
 resource "upcloud_server" "vault" {
   count    = var.vault_vm_count
-  hostname = var.hostname_prefix != "" ? "${var.hostname_prefix}${count.index}.example.ltf" : "terraform${count.index}.example.tld"
+  hostname = var.hostname_prefix != "" ? "${var.hostname_prefix}${count.index}.vault.example.tld" : "terraform${count.index}.vault.example.tld"
   zone     = "fi-hel1"
   plan     = "1xCPU-1GB"
-  metadata = true # false by default, must be enabled to enable ssh keys to be injected and cloud-init
+  metadata = true # false by default, must be enabled to enable ssh keys to be injected and cloud-init to run
 
   template {
     # uuid of packer built image
@@ -46,10 +51,11 @@ resource "upcloud_server" "vault" {
     size = 25
   }
 
-# Something wrong with tags or my account, running with this ruins state!
-#  tags = [
-#    "vault-${var.environment}"
-#  ]
+  # Only main account can create tags, don't use
+  #  tags = [
+  #    "vault-${var.environment}"
+  #  ]
+
   # network_interface {
   #   type    = "private"
   #   network = upcloud_network.private_network.id
@@ -72,6 +78,9 @@ resource "upcloud_server" "vault" {
     storage = upcloud_storage.vault_storage[count.index].id
   }
 
-  user_data = templatefile("user_data.tftpl", { count = count.index })
+  user_data = templatefile("user_data.tftpl", { count = count.index,
+                                                regex = local.discovery_regex,
+                                                username = var.username,
+                                                password = var.password })
 
 }
