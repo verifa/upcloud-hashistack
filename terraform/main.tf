@@ -1,4 +1,3 @@
-
 provider "upcloud" {
   username = var.username
   password = var.password
@@ -12,28 +11,24 @@ locals {
   vault_servers = {
     0 = {
       "image" : var.custom_image
-      "unseal_keys": var.unseal_keys
-# When upgrading change image one-by-one (standbys)
-#      "image" : var.custom_image
-# Unseal just this one:
-#      "unseal_keys": var.unseal_keys
-# Skip unsealing (perhaps starting from scratch):
-#      "unseal_keys": []
+      "unseal_keys" : var.unseal_keys
+      # When upgrading change image one-by-one (standbys)
+      #      "image" : var.custom_image
+      # Unseal just this one:
+      #      "unseal_keys": var.unseal_keys
+      # Skip unsealing (perhaps starting from scratch):
+      #      "unseal_keys": []
     },
     1 = {
       "image" : var.custom_image
-      "unseal_keys": []
+      "unseal_keys" : var.unseal_keys
     },
     2 = {
       "image" : var.custom_image
-      "unseal_keys": []
+      "unseal_keys" : []
     },
   }
 }
-
-# resource "upcloud_floating_ip_address" "my_floating_address" {
-#   zone = "fi-hel1"
-# }
 
 resource "upcloud_network" "private_network" {
   name = "example_private_net"
@@ -78,14 +73,14 @@ resource "upcloud_server" "vault" {
   #    "vault-${var.environment}"
   #  ]
 
-  # network_interface {
-  #   type    = "private"
-  #   network = upcloud_network.private_network.id
-  # }
-
   network_interface {
-    type = "public"
+    type    = "private"
+    network = upcloud_network.private_network.id
   }
+
+  # network_interface {
+  #   type = "public"
+  # }
 
   login {
     user = "root"
