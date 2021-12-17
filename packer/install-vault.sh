@@ -41,12 +41,17 @@ function install_deps {
 function download_install {
     log_info "Downloading and installing vault"
 
-    wget "${VAULT_URL}/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip" -O ${DOWNLOAD_PACKAGE_PATH}
-    unzip -d /tmp "${DOWNLOAD_PACKAGE_PATH}"
+    # Use this to get official Vault binary, for UpCloud we use custom one until go-discover PR one day merges.
+    #wget "${VAULT_URL}/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip" -O ${DOWNLOAD_PACKAGE_PATH}
+    #unzip -d /tmp "${DOWNLOAD_PACKAGE_PATH}"
 
-    log_info "Moving Vault binary to $vault_dest_path"
-    chown root:root /tmp/vault
-    mv /tmp/vault /usr/local/bin/.
+    log_info "Moving Vault binary to $SYSTEM_BIN_DIR"
+
+    TMP_DIR=$(mktemp -d)
+    wget https://builds.hashistack.fi-hel2.upcloudobjects.com/vault -P $TMP_DIR
+    mv $TMP_DIR/vault $SYSTEM_BIN_DIR/.
+    chown root:root /usr/local/bin/vault
+    chmod 0755 /usr/local/bin/vault
 
     vault --version
 
@@ -73,9 +78,11 @@ function configure_systemd {
 }
 
 function configure_vault_config {
-    log_info "Create configuration directory /etc/vault.d"
+    log_info "Create configuration directory /etc/vault.d and data dir /opt/vault/data"
     mkdir --parents /etc/vault.d
     chown --recursive vault:vault /etc/vault.d
+    mkdir --parents /opt/vault/data
+    chown --recursive vault:vault /opt/vault/data
 }
 
 function install {

@@ -1,0 +1,60 @@
+#cloud-config
+users:
+- default
+manage_etc_hosts: false
+preserve_hostname: true
+disable_root: false
+fs_setup:
+- label: data
+  filesystem: 'ext4'
+  device: '/dev/sdb'
+  partition: 'auto'
+  overwrite: 'false'
+mounts:
+- [ sdb, /opt/vault/data, "auto", "defaults,nofail", "0", "0" ]
+write_files:
+- path: /etc/vault.d/vault.json
+  owner: vault:vault
+  permissions: '0640'
+  content: |
+    {
+    "api_addr": "https://INSTANCE_IP:8200",
+    "cluster_addr": "https://INSTANCE_IP:8201",
+    "disable_mlock": true,
+    "ui": true,
+    "log_level": "trace",
+    "listener": {
+        "tcp": {
+            "tls_disable": 1,
+            "address": "0.0.0.0:8200"
+        }
+    },
+    "storage": {
+        "raft": {
+            "node_id": "node${index}",
+            "path": "/opt/vault/data",
+            "retry_join": {
+                "auto_join": "provider=upcloud title_match=${regex} username=${username} password=${password}",
+                "auto_join_scheme": "http"
+            }
+        }
+    },
+    "telemetry": {
+        "disable_hostname": true,
+        "prometheus_retention_time": "12h"
+    }
+    }
+runcmd:
+- [ touch, /var/lib/cloud/instance/locale-check.skip ]
+- chown -R vault:vault /opt/vault /etc/vault.d
+- sudo hostnamectl set-hostname $(wget -O- -q  http://169.254.169.254/metadata/v1/hostname)
+- sudo echo 127.0.0.1 $(hostname) >> /etc/hosts
+- >
+  IP_FROM_META=$(wget -O- -q http://169.254.169.254/metadata/v1/network/interfaces/1/ip_addresses/1/address) && 
+  sed -i "s/INSTANCE_IP/$${IP_FROM_META}/g" /etc/vault.d/vault.json
+- systemctl restart vault
+- sleep 5
+- export VAULT_ADDR="http://127.0.0.1:8200"
+%{ for key in unseal_keys ~}
+- vault operator unseal ${key}
+%{ endfor ~}
