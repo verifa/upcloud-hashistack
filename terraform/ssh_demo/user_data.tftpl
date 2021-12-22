@@ -1,0 +1,12 @@
+#cloud-config
+users:
+- default
+manage_etc_hosts: false
+preserve_hostname: true
+disable_root: false
+runcmd:
+- [ touch, /var/lib/cloud/instance/locale-check.skip ]
+- wget -O /etc/ssh/trusted-user-ca-keys.pem ${vault_addr}/v1/${ssh_mount_path}/public_key
+- chmod 0644 /etc/ssh/trusted-user-ca-keys.pem
+- echo "TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem" >> /etc/ssh/sshd_config
+- systemctl restart sshd
