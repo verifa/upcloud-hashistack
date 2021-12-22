@@ -27,3 +27,23 @@ password=$(echo $read_json | jq -r .data.password)
 username=$(echo $read_json | jq -r .data.username)
 psql postgres://${username}:${password}$(terraform output -raw psql_helper_uri)
 ```
+
+### Problem with destroying
+When trying to delete the stack it might fail with error:
+```bash
+vault_mount.this: Destroying... [id=postgres]
+╷
+│ Error: error deleting from Vault: Error making API request.
+│
+│ URL: DELETE http://127.0.0.1:8200/v1/sys/mounts/postgres
+│ Code: 400. Errors:
+│
+│ * failed to revoke "postgres/creds/admin-role/5SXJ0padYZMbhlE5nGwZ3Gsr" (1 / 4): failed to revoke entry: resp: (*logical.Response)(nil) err: failed to find entry for connection with name: "upcloud-postgres"
+│
+```
+
+You can use Vault cli to forcefully revoke the lease in this case:
+```bash
+vault write -force /sys/leases/revoke-force/postgres/creds/admin-role
+```
+There seems to be open issues about this for the Vault provider, for example: https://github.com/hashicorp/terraform-provider-vault/issues/622
