@@ -1,8 +1,9 @@
 provider "vault" {}
 
 provider "upcloud" {
-  username = var.username
-  password = var.password
+  # Provided with env vars
+  # UPCLOUD_USERNAME
+  # UPCLOUD_PASSWORD
 }
 
 resource "vault_mount" "this" {
@@ -26,8 +27,8 @@ resource "vault_ssh_secret_backend_role" "this" {
   ttl                     = "1h"
   max_ttl                 = "24h"
   allowed_extensions      = "permit-pty,permit-port-forwarding"
-  default_extensions      = {"permit-pty": ""} #allows you to get a terminal, nice type...
-  algorithm_signer        = "rsa-sha2-512" #needed for OpenSSH > 8.2
+  default_extensions      = { "permit-pty" : "" } #allows you to get a terminal, nice type...
+  algorithm_signer        = "rsa-sha2-512"        #needed for OpenSSH > 8.2
 }
 
 resource "upcloud_server" "this" {
@@ -37,7 +38,7 @@ resource "upcloud_server" "this" {
   metadata = true # false by default, must be enabled to enable ssh keys to be injected and cloud-init to run
 
   template {
-    storage = "01377edf-9746-4fc0-9934-dd687f7dd425" #TODO build image where user-data works!
+    storage = var.image
     size    = 25
   }
 

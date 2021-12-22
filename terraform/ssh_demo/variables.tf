@@ -1,9 +1,6 @@
-variable "username" {
-  type = string
-}
-
-variable "password" {
-  type = string
+variable "image" {
+  type    = string
+  default = "01377edf-9746-4fc0-9934-dd687f7dd425"
 }
 
 variable "vault_addr" {
