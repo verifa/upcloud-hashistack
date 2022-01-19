@@ -7,8 +7,10 @@ terraform init
 terraform plan
 ```
 Now you should see the plan in the Terraform Cloud website, see the link from the output of the command.
-## BUG!?
+
+## Problems passing variables from localhost (TFC CLI mode)
 I was having problem passing in env variables for the UpCloud credentials when they are not saved in TFC, at least with 1.1.0 terraform I had to do the following to pass the values properly from localhost:
 ```bash
 terraform plan -var "password=\"$TF_VAR_password\"" -var "username=\"$TF_VAR_username\""
 ```
+This whole "CLI mode" -feature was just released, so it might be fixed in near future.

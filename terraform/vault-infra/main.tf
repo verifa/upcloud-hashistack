@@ -14,5 +14,6 @@ module "upcloud_vault" {
   # pass defaults, but keep them in workspace
   key_ring   = var.key_ring
   crypto_key = var.crypto_key
+  ssh_pub_key = var.ssh_pub_key
 
 }
