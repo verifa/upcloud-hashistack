@@ -1,50 +1,32 @@
-provider "upcloud" {
-  username = var.username
-  password = var.password
-}
-
 locals {
   # include '\\.' in the regex
   discovery_regex = var.hostname_prefix != "" ? "^${var.hostname_prefix}[0-9]+\\\\.vault" : "^terraform[0-9]+\\\\.vault"
 
-  # for_each variable to allow rolling ugprades by swapping image parameter value
+  # for_each variables to allow rolling ugprades by swapping image parameter value
+  #vault_servers = [0, 1, 2]
+  #vault_image_ids = [var.custom_image, var.custom_image, var.custom_image]
   vault_servers = {
     0 = {
       "image" : var.custom_image
-      "unseal_keys" : var.unseal_keys
-      # When upgrading change image one-by-one (standbys)
-      #      "image" : var.custom_image
-      # Unseal just this one:
-      #      "unseal_keys": var.unseal_keys
-      # Skip unsealing (perhaps starting from scratch):
-      #      "unseal_keys": []
     },
     1 = {
       "image" : var.custom_image
-      "unseal_keys" : var.unseal_keys
     },
     2 = {
       "image" : var.custom_image
-      "unseal_keys" : []
     },
   }
 }
 
-resource "upcloud_network" "private_network" {
-  name = "example_private_net"
-  zone = "fi-hel1"
+module "gcp_unseal" {
+  source = "../gcp-unseal"
 
-  # router = upcloud_router.example_router.id
-
-  ip_network {
-    address            = var.network_cidr != "" ? var.network_cidr : "10.0.0.0/24"
-    dhcp               = true
-    dhcp_default_route = false
-    family             = "IPv4"
-    gateway            = var.network_gw != "" ? var.network_gw : "10.0.0.1"
-  }
+  # managed by TFC workspace vars
+  key_ring   = var.key_ring
+  crypto_key = var.crypto_key
+  gcloud-project = var.gcloud-project
+  gcloud-region = var.gcloud-region
 }
-
 
 resource "upcloud_storage" "vault_storage" {
   count = var.vault_vm_count
@@ -55,7 +37,8 @@ resource "upcloud_storage" "vault_storage" {
 }
 
 resource "upcloud_server" "vault" {
-  for_each = local.vault_servers
+  # need to convert number to list of strings 3=["0","1","2"]
+  for_each = toset(formatlist("%s", (range(var.vault_vm_count))))
   hostname = var.hostname_prefix != "" ? "${var.hostname_prefix}${each.key}.vault.example.tld" : "terraform${each.key}.vault.example.tld"
   zone     = "fi-hel1"
   plan     = "1xCPU-1GB"
@@ -63,9 +46,8 @@ resource "upcloud_server" "vault" {
 
   template {
     # uuid of packer built image
-    storage = var.custom_image
-    # storage = "01000000-0000-4000-8000-000020060100"
-    size = 25
+    storage = local.vault_servers[each.key].image
+    size    = 25
   }
 
   # Only main account can create tags, don't use
@@ -74,13 +56,8 @@ resource "upcloud_server" "vault" {
   #  ]
 
   network_interface {
-    type    = "private"
-    network = upcloud_network.private_network.id
+    type = "public"
   }
-
-  # network_interface {
-  #   type = "public"
-  # }
 
   login {
     user = "root"
@@ -92,14 +69,16 @@ resource "upcloud_server" "vault" {
   }
 
   storage_devices {
-    # mounts are dependent on the key of the vault_server!
     storage = upcloud_storage.vault_storage[each.key].id
   }
 
-  user_data = templatefile("user_data.tftpl", { index = each.key,
-    regex    = local.discovery_regex,
-    username = var.username,
-    password = var.password,
-  unseal_keys = local.vault_servers[each.key].unseal_keys })
-
+  user_data = templatefile("${path.module}/gcp_user_data.tftpl", { index = each.key,
+    regex          = local.discovery_regex,
+    username       = var.username,
+    gcloud-project = var.gcloud-project,
+    keyring_location : module.gcp_unseal.keyring_location,
+    key_ring    = module.gcp_unseal.key_ring,
+    crypto_key  = module.gcp_unseal.crypto_key,
+    credentials = module.gcp_unseal.private_key,
+  password = var.password, })
 }

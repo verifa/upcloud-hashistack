@@ -29,6 +29,15 @@ write_files:
             "address": "0.0.0.0:8200"
         }
     },
+    "seal": {
+      "gcpckms": {
+        "credentials": "/etc/vault.d/creds.json",
+        "project": "${gcloud-project}",
+        "region": "${keyring_location}",
+        "key_ring": "${key_ring}",
+        "crypto_key": "${crypto_key}"
+      }
+    },
     "storage": {
         "raft": {
             "node_id": "node${index}",
@@ -52,9 +61,6 @@ runcmd:
 - >
   IP_FROM_META=$(wget -O- -q http://169.254.169.254/metadata/v1/network/interfaces/1/ip_addresses/1/address) && 
   sed -i "s/INSTANCE_IP/$${IP_FROM_META}/g" /etc/vault.d/vault.json
+- echo -n ${credentials} | base64 -d > /etc/vault.d/creds.json
+- chown vault:vault /etc/vault.d/creds.json
 - systemctl restart vault
-- sleep 5
-- export VAULT_ADDR="http://127.0.0.1:8200"
-%{ for key in unseal_keys ~}
-- vault operator unseal ${key}
-%{ endfor ~}
